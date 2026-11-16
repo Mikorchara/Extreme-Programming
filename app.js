@@ -119,7 +119,7 @@ function updateMethodFields(row) {
   input.removeAttribute("aria-invalid");
 }
 
-function appendMethod(method) {
+function appendMethod(method, isExisting = false) {
   const row = methodTemplate.content.firstElementChild.cloneNode(true);
   const type = row.querySelector(".method-type");
   const region = row.querySelector(".method-region");
@@ -136,8 +136,8 @@ function appendMethod(method) {
     const input = row.querySelector(".method-value");
     input.value = method.type === "phone" ? phoneEditorValue(method.value) : method.value;
     input.dataset.digits = method.type === "phone" ? input.value : "";
-    row.querySelector(".legacy-phone-note").hidden = method.type !== "phone" || Boolean(input.value);
-    originalMethods.set(row, method);
+    row.querySelector(".legacy-phone-note").hidden = !isExisting || method.type !== "phone" || Boolean(input.value);
+    if (isExisting) originalMethods.set(row, method);
   }
 
   methodList.append(row);
@@ -157,9 +157,14 @@ function resetEditor(contact = null) {
   methodList.replaceChildren();
 
   if (contact) {
-    contact.methods.forEach(appendMethod);
-  } else {
-    appendMethod();
+    contact.methods.forEach((method) => appendMethod(method, true));
+  }
+
+  if (!contact?.methods.some((method) => method.type === "phone")) {
+    appendMethod({ type: "phone", value: "" });
+  }
+  if (!contact?.methods.some((method) => method.type === "email")) {
+    appendMethod({ type: "email", value: "" });
   }
 
   setStatus("");
