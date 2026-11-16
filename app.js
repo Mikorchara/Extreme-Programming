@@ -119,7 +119,7 @@ function updateMethodFields(row) {
   input.removeAttribute("aria-invalid");
 }
 
-function appendMethod(method, isExisting = false) {
+function appendMethod(method) {
   const row = methodTemplate.content.firstElementChild.cloneNode(true);
   const type = row.querySelector(".method-type");
   const region = row.querySelector(".method-region");
@@ -136,8 +136,8 @@ function appendMethod(method, isExisting = false) {
     const input = row.querySelector(".method-value");
     input.value = method.type === "phone" ? phoneEditorValue(method.value) : method.value;
     input.dataset.digits = method.type === "phone" ? input.value : "";
-    row.querySelector(".legacy-phone-note").hidden = !isExisting || method.type !== "phone" || Boolean(input.value);
-    if (isExisting) originalMethods.set(row, method);
+    row.querySelector(".legacy-phone-note").hidden = method.type !== "phone" || Boolean(input.value);
+    originalMethods.set(row, method);
   }
 
   methodList.append(row);
@@ -156,15 +156,10 @@ function resetEditor(contact = null) {
   cancelEditButton.hidden = !contact;
   methodList.replaceChildren();
 
-  if (contact) {
-    contact.methods.forEach((method) => appendMethod(method, true));
-  }
-
-  if (!contact?.methods.some((method) => method.type === "phone")) {
-    appendMethod({ type: "phone", value: "" });
-  }
-  if (!contact?.methods.some((method) => method.type === "email")) {
-    appendMethod({ type: "email", value: "" });
+  if (contact?.methods.length) {
+    contact.methods.forEach((method) => appendMethod(method));
+  } else {
+    appendMethod();
   }
 
   setStatus("");
@@ -229,8 +224,8 @@ function readContactForm() {
 
       const region = row.querySelector(".method-region").value;
       const original = originalMethods.get(row);
-      if (original?.type === type && phoneEditorValue(original.value) === input.value && (original.region ?? "") === region) {
-        methods.push(original);
+      if (original?.type === type && phoneEditorValue(original.value) === input.value) {
+        methods.push((original.region ?? "") === region ? original : { ...original, region });
         continue;
       }
 
@@ -265,7 +260,7 @@ function regionText(method) {
 }
 
 function displayMethodValue(method) {
-  return method.type === "phone" ? phoneEditorValue(method.value) || method.value : method.value;
+  return method.value;
 }
 
 function createCard(contact) {
@@ -326,7 +321,10 @@ function renderContacts() {
   const query = search.value.trim().toLowerCase();
   const available = favoritesOnly ? contacts.filter((contact) => contact.favorite) : contacts;
   const matches = available.filter((contact) => {
-    const fields = [contact.name, ...contact.methods.map((method) => `${displayMethodValue(method)} ${regionText(method)}`)];
+    const fields = [contact.name, ...contact.methods.map((method) => {
+      const digits = method.type === "phone" ? phoneEditorValue(method.value) : "";
+      return `${displayMethodValue(method)} ${digits} ${regionText(method)}`;
+    })];
     return fields.some((field) => field.toLowerCase().includes(query));
   });
 
