@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="添加、查找并在当前浏览器中保存联系人。">
+    <title>通讯录</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <main class="workspace">
+      <header class="workspace-header">
+        <div class="brand">
+          <span class="brand-icon" aria-hidden="true"><span></span></span>
+          <h1>通讯录</h1>
+        </div>
+        <p class="storage-note">数据保存在当前浏览器</p>
+      </header>
+
+      <div class="workspace-grid">
+        <section class="panel editor-panel" aria-labelledby="editor-heading">
+          <h2 id="editor-heading">新增联系人</h2>
+          <form id="contact-form" autocomplete="off">
+            <div class="field">
+              <label for="contact-name">姓名</label>
+              <input id="contact-name" name="name" type="text" placeholder="例如：李明" required>
+            </div>
+            <div class="field">
+              <label for="contact-phone">电话 <span class="optional">选填</span></label>
+              <input id="contact-phone" name="phone" type="tel" placeholder="输入电话号码">
+            </div>
+            <div class="field">
+              <label for="contact-email">邮箱 <span class="optional">选填</span></label>
+              <input id="contact-email" name="email" type="email" placeholder="输入邮箱地址">
+            </div>
+            <button class="primary-button" type="submit">添加联系人</button>
+            <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <section class="panel directory-panel" aria-labelledby="directory-heading">
+          <div class="directory-header">
+            <h2 id="directory-heading">联系人列表</h2>
+            <p class="contact-count" aria-live="polite">共 <span id="contact-count">0</span> 位</p>
+          </div>
+          <div class="search-field">
+            <label class="visually-hidden" for="search-input">搜索联系人</label>
+            <span class="search-icon" aria-hidden="true"></span>
+            <input id="search-input" type="search" placeholder="搜索姓名、电话或邮箱" autocomplete="off">
+          </div>
+          <div id="contacts-list" class="contacts-list"></div>
+          <div id="empty-state" class="empty-state">
+            <span class="empty-icon" aria-hidden="true"><span></span></span>
+            <p>暂无联系人</p>
+            <span>添加第一位联系人后，即可在这里查看。</span>
+          </div>
+          <div id="search-empty" class="empty-state" hidden>
+            <p>没有找到匹配的联系人</p>
+            <span>可以试试其他姓名、电话或邮箱。</span>
+          </div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>
