@@ -6,7 +6,8 @@
     <meta name="description" content="添加、查找并在当前浏览器中保存联系人。">
     <title>通讯录</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="app.js" defer></script>
+    <script src="vendor/xlsx.mini.min.js" defer></script>
+    <script type="module" src="app.js"></script>
   </head>
   <body>
     <main class="workspace">
@@ -20,23 +21,36 @@
 
       <div class="workspace-grid">
         <section class="panel editor-panel" aria-labelledby="editor-heading">
-          <h2 id="editor-heading">新增联系人</h2>
-          <form id="contact-form" autocomplete="off">
+          <div class="form-heading">
+            <h2 id="editor-heading">新增联系人</h2>
+            <button class="text-button" id="cancel-edit" type="button" hidden>取消编辑</button>
+          </div>
+          <form id="contact-form" autocomplete="off" novalidate>
             <div class="field">
               <label for="contact-name">姓名</label>
               <input id="contact-name" name="name" type="text" placeholder="例如：李明" required>
             </div>
-            <div class="field">
-              <label for="contact-phone">电话 <span class="optional">选填</span></label>
-              <input id="contact-phone" name="phone" type="tel" placeholder="输入电话号码">
-            </div>
-            <div class="field">
-              <label for="contact-email">邮箱 <span class="optional">选填</span></label>
-              <input id="contact-email" name="email" type="email" placeholder="输入邮箱地址">
-            </div>
-            <button class="primary-button" type="submit">添加联系人</button>
+            <fieldset class="method-editor">
+              <legend>联系方式 <span class="optional">选填</span></legend>
+              <div class="method-list" id="method-list"></div>
+              <button class="secondary-button" id="add-method" type="button">＋ 添加联系方式</button>
+            </fieldset>
+            <button class="primary-button" id="save-contact" type="submit">添加联系人</button>
             <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
           </form>
+        </section>
+
+        <section class="panel detail-panel" id="detail-panel" aria-labelledby="detail-heading" hidden>
+          <div class="detail-heading">
+            <h2 id="detail-heading">联系人信息</h2>
+            <button class="text-button" id="detail-close" type="button">关闭</button>
+          </div>
+          <h3 class="detail-name" id="detail-name"></h3>
+          <dl class="detail-list" id="detail-list"></dl>
+          <div class="detail-actions">
+            <button class="primary-button" id="detail-edit" type="button">编辑联系人</button>
+            <button class="secondary-button" id="detail-new" type="button">新增联系人</button>
+          </div>
         </section>
 
         <section class="panel directory-panel" aria-labelledby="directory-heading">
@@ -44,23 +58,75 @@
             <h2 id="directory-heading">联系人列表</h2>
             <p class="contact-count" aria-live="polite">共 <span id="contact-count">0</span> 位</p>
           </div>
+          <div class="directory-toolbar">
+            <div class="contact-tools" aria-label="筛选联系人" role="group">
+              <button class="filter-button" id="show-all" type="button" aria-pressed="true">全部</button>
+              <button class="filter-button" id="show-favorites" type="button" aria-pressed="false">收藏</button>
+            </div>
+            <div class="excel-tools" aria-label="Excel 操作" role="group">
+              <button class="secondary-button" id="import-excel" type="button">导入 Excel</button>
+              <button class="secondary-button" id="export-excel" type="button">导出 Excel</button>
+              <input id="excel-file" type="file" accept=".xlsx" hidden>
+            </div>
+          </div>
           <div class="search-field">
             <label class="visually-hidden" for="search-input">搜索联系人</label>
             <span class="search-icon" aria-hidden="true"></span>
-            <input id="search-input" type="search" placeholder="搜索姓名、电话或邮箱" autocomplete="off">
+            <input id="search-input" type="search" placeholder="搜索姓名或联系方式" autocomplete="off">
           </div>
+          <p class="form-status" id="directory-status" role="status" data-state="error" hidden></p>
           <div id="contacts-list" class="contacts-list"></div>
           <div id="empty-state" class="empty-state">
             <span class="empty-icon" aria-hidden="true"><span></span></span>
-            <p>暂无联系人</p>
-            <span>添加第一位联系人后，即可在这里查看。</span>
+            <p id="empty-title">暂无联系人</p>
+            <span id="empty-hint">添加第一位联系人后，即可在这里查看。</span>
           </div>
           <div id="search-empty" class="empty-state" hidden>
             <p>没有找到匹配的联系人</p>
-            <span>可以试试其他姓名、电话或邮箱。</span>
+            <span>可以试试其他姓名或联系方式。</span>
           </div>
         </section>
       </div>
     </main>
+
+    <dialog class="confirmation" id="remove-contact-dialog" aria-labelledby="remove-contact-title" aria-describedby="remove-contact-message">
+      <form method="dialog">
+        <h2 id="remove-contact-title">删除联系人</h2>
+        <p id="remove-contact-message"></p>
+        <p class="form-status" id="remove-contact-error" role="status" data-state="error" hidden></p>
+        <div class="confirmation-actions">
+          <button class="secondary-button" autofocus>取消</button>
+          <button class="danger-button" id="confirm-remove-contact" type="button">确认删除</button>
+        </div>
+      </form>
+    </dialog>
+
+    <template id="method-template">
+      <div class="method-row">
+        <div class="method-fields">
+          <label class="field method-type-field">
+            <span>类型</span>
+            <select class="method-type">
+              <option value="phone">电话</option>
+              <option value="email">邮箱</option>
+              <option value="social">社交账号</option>
+              <option value="address">地址</option>
+            </select>
+          </label>
+          <label class="field method-region-field" hidden>
+            <span>电话地区</span>
+            <select class="method-region">
+              <option value="">未指定地区</option>
+            </select>
+          </label>
+          <label class="field method-value-field">
+            <span class="method-value-label">电话号码</span>
+            <input class="method-value" type="tel">
+            <small class="legacy-phone-note" hidden>旧号码已保留。可输入新号码或移除此条联系方式。</small>
+          </label>
+        </div>
+        <button class="text-button remove-method" type="button" aria-label="移除此条联系方式">移除</button>
+      </div>
+    </template>
   </body>
 </html>
